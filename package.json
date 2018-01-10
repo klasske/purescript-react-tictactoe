@@ -1,5 +1,5 @@
 {
-    "name": "purescript-react-test",
+    "name": "purescript-react-tictactoe",
     "files": [],
     "scripts": {
       "webpack": "webpack --progress",
