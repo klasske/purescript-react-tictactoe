@@ -18,7 +18,7 @@ import Data.Maybe (Maybe(..), fromJust)
 import Data.List (List, range, index, foldl, mapWithIndex)
 import Data.Array ((:), (..), mapMaybe, head)
 import Partial.Unsafe (unsafePartial)
-import React (ReactElement, ReactClass, ReactState, ReadWrite, ReadOnly, createFactory, createClass, spec, getProps, readState, writeStateWithCallback)
+import React (ReactElement, ReactClass, ReactState, ReadWrite, ReadOnly, createFactory, createClass, spec, getProps, readState, transformState, writeStateWithCallback)
 import ReactDOM (render)
 
 foreign import interval :: forall eff a.
@@ -27,11 +27,9 @@ foreign import interval :: forall eff a.
                              Eff eff Unit
 
 
-boardSize :: Int
-boardSize = 3
 
-winningLines :: Array (Array Int)
-winningLines =
+winningLines :: Int -> Array (Array Int)
+winningLines boardSize =
     diagonal1 : diagonal2 : append horizontal vertical
     where    
         baseRange = (0..(boardSize - 1))
@@ -42,7 +40,7 @@ winningLines =
 
 
 newtype GameState = GameState
-  { player :: String }
+  { boardSize :: Int }
 newtype BoardState = BoardState 
     { squares :: List String
     , xIsNext :: Boolean}
@@ -53,7 +51,7 @@ newtype SquareState = SquareState
     }
 
 initialState :: GameState
-initialState = GameState { player: "X"  }
+initialState = GameState { boardSize: 3  }
 initialSquareState :: SquareState
 initialSquareState = 
   SquareState
@@ -61,8 +59,8 @@ initialSquareState =
     , click: \_ -> pure "Why doesn't this update?" >>= log
     , test: "?"
     }
-initialBoardState :: BoardState
-initialBoardState = BoardState 
+emptyBoardState :: Int -> BoardState
+emptyBoardState boardSize = BoardState 
     { squares: range 0 (boardSize * boardSize - 1) # map (\_ -> "") 
     , xIsNext: true}
 
@@ -95,15 +93,15 @@ square = createClass squareSpec
             [ D.text textValue ]
     
 
-board :: ReactClass BoardState
-board = createClass boardSpec 
+board :: Int -> ReactClass BoardState
+board boardSize = createClass boardSpec 
   where
-  boardSpec = (spec initialBoardState render)
+  boardSpec = (spec (emptyBoardState boardSize) render)
     { displayName = "board"}
 
 
-  hasWinner (squares) =
-    winningLines # mapMaybe isWinner # head
+  hasWinner squares =
+    winningLines boardSize # mapMaybe isWinner # head
     where
       allOf :: String -> Array (Maybe String) -> Maybe String
       allOf value = foldl sameValue (Just value)  
@@ -150,28 +148,43 @@ board = createClass boardSpec
         , test: show i    
         })
 
-  boardRow ctx row =
+  boardRow ctx row  =
     D.div [P.className "board-row"] $ map (\i -> rendersquare ctx $ row * boardSize + i ) (0..(boardSize - 1))
 
-  
 
   render ctx = do
     state' <- readState ctx
     pure $ D.div [] $ 
         D.div [P.className "status"] [D.text (status state')] : map (boardRow ctx) (0..(boardSize - 1))
-            
+       
 
 game :: forall props. ReactClass props
 game = createClass gameSpec
   where
   gameSpec = (spec initialState render)
     { displayName = "game" }
-  toString :: GameState -> String
-  toString ( GameState { player } ) = player
+  getBoardSize ( GameState { boardSize } ) = boardSize
+  add ( GameState { boardSize } ) x = 
+    if boardSize + x > 1 && boardSize + x < 20 then  
+        GameState {boardSize: boardSize + x}
+    else GameState {boardSize: boardSize}
   render ctx = do
-    pure $ D.div[P.className "game"]
-                [D.div [P.className "game-board"] 
-                       [createFactory board initialBoardState] ]
+    state' <- readState ctx 
+    pure $ D.div[P.className "game-container"]
+                [ D.div [P.className "board-size"] 
+                        [ D.button 
+                            [ P.onClick (\_ -> transformState ctx (\state -> add state 1) )
+                            , P.className "btn size-btn"]
+                            [D.i [P.className "fa fa-plus"] []]   
+                        , D.div [P.className "square"] [D.text (show $ getBoardSize state')]
+                        , D.button 
+                            [P.onClick (\_ -> transformState ctx (\state -> add state (-1)) )
+                            , P.className "btn size-btn"]
+                            [D.i [P.className "fa fa-minus"] []]  
+                        ]
+                , D.div[P.className "game"]
+                       [D.div [P.className "game-board"] [createFactory (board (getBoardSize state')) $ emptyBoardState (getBoardSize state')] ]
+                ]
 
 
 main :: forall eff. Eff (dom :: DOM | eff) Unit
