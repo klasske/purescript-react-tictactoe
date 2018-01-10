@@ -69,7 +69,7 @@ board boardSize = createClass boardSpec
         , isNext: flipPlayer isNext
         }
 
-  validMove boardState i = not $ gameHasEnded boardState && (isNothing $ readSquare i boardState)
+  validMove boardState i = (not $ gameHasEnded boardState) && (isNothing $ readSquare i boardState)
 
   rendersquare ctx i =                
     createFactory square 
