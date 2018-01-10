@@ -2,6 +2,8 @@
 
 PureScript implementation of TicTacToe based on the [tutorial on ReactJs.com](https://reactjs.org/tutorial/tutorial.html) and a fork of [purescript-react-example](https://github.com/ethul/purescript-react-example)
 
+Find a running example on [https://klasske.github.io/TicTacToe](https://klasske.github.io/TicTacToe)
+
 ## Build
 
     bower install
