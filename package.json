@@ -1,0 +1,20 @@
+{
+    "name": "purescript-react-test",
+    "files": [],
+    "scripts": {
+      "webpack": "webpack --progress",
+      "webpack:watch": "webpack --progress --watch",
+      "webpack-dev-server": "webpack-dev-server --progress --inline --hot"
+    },
+    "dependencies": {
+      "create-react-class": "^15.6.0",
+      "react": "^15.6.1",
+      "react-dom": "^15.6.1"
+    },
+    "devDependencies": {
+      "purescript": "0.11.6",
+      "purs-loader": "^3.0.0",
+      "webpack": "^1.13.3",
+      "webpack-dev-server": "^1.16.2"
+    }
+  }
