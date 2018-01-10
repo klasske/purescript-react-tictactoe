@@ -15,10 +15,10 @@ import DOM.Node.Types (Element, ElementId(..), documentToNonElementParentNode)
 -- import Data.Int (decimal, toStringAs)
 
 import Data.Maybe (Maybe(..), fromJust)
-import Data.List (List, range, index, foldr, foldl, mapWithIndex)
-import Data.Array ((:), (..), find, mapMaybe, head)
+import Data.List (List, range, index, foldl, mapWithIndex)
+import Data.Array ((:), (..), mapMaybe, head)
 import Partial.Unsafe (unsafePartial)
-import React (ReactElement, ReactClass, ReactState, ReadWrite, ReadOnly, createFactory, createClass, spec, getProps, readState, transformState, writeStateWithCallback)
+import React (ReactElement, ReactClass, ReactState, ReadWrite, ReadOnly, createFactory, createClass, spec, getProps, readState, writeStateWithCallback)
 import ReactDOM (render)
 
 foreign import interval :: forall eff a.
@@ -47,8 +47,8 @@ newtype BoardState = BoardState
     { squares :: List String
     , xIsNext :: Boolean}
 newtype SquareState = SquareState
-    { valueFunction :: forall state t1. Unit -> Eff (console:: CONSOLE, state :: ReactState ReadOnly | t1) (Maybe String)
-    , click :: forall state t1. Unit -> Eff (console:: CONSOLE, state :: ReactState ReadWrite | t1) Unit
+    { valueFunction :: forall t1. Unit -> Eff (console:: CONSOLE, state :: ReactState ReadOnly | t1) (Maybe String)
+    , click :: forall t1. Unit -> Eff (console:: CONSOLE, state :: ReactState ReadWrite | t1) Unit
     , test :: String
     }
 
@@ -101,13 +101,9 @@ board = createClass boardSpec
   boardSpec = (spec initialBoardState render)
     { displayName = "board"}
 
-  status :: BoardState -> String
-  status (BoardState {xIsNext}) = "Next player: " <> (if xIsNext then "X" else "O")
 
-  hasWinner (BoardState {squares}) =
-    case winningLines # mapMaybe isWinner # head of
-       Just line -> show line 
-       Nothing -> "No winner"
+  hasWinner (squares) =
+    winningLines # mapMaybe isWinner # head
     where
       allOf :: String -> Array (Maybe String) -> Maybe String
       allOf value = foldl sameValue (Just value)  
@@ -119,30 +115,43 @@ board = createClass boardSpec
          line 
            # map (index squares)   
            # (\y -> allOf "X" y <|> allOf "O" y)
+  hasWinner' (BoardState {squares}) = 
+    case hasWinner squares of
+       Just line -> show line 
+       Nothing -> "No winner"
+  hasWinner'' (BoardState {squares}) = 
+    case hasWinner squares of
+       Just line -> true
+       Nothing -> false
 
+  status :: BoardState -> String
+  status (BoardState {squares, xIsNext}) = 
+    
+    case hasWinner squares of
+       Just line -> "Winner: " <> line 
+       Nothing -> "Next player: " <> (if xIsNext then "X" else "O")
 
-  readSquare :: forall state t1. Int -> BoardState -> Eff (console:: CONSOLE, state :: ReactState ReadOnly | t1) (Maybe String)
+  readSquare :: forall t1. Int -> BoardState -> Eff (console:: CONSOLE, state :: ReactState ReadOnly | t1) (Maybe String)
   readSquare i (BoardState {squares}) = do
     pure $ index squares i
 
   newValue xIsNext = if xIsNext then "X" else "O"
-  updateSquare i (BoardState {squares, xIsNext}) =  do 
+  updateSquare i (BoardState {squares, xIsNext}) = do 
     BoardState {squares : mapWithIndex (\j s -> if j == i then newValue xIsNext else s) squares, xIsNext: not xIsNext}
-  rendersquare' ctx i =                
+  rendersquare ctx i =                
     createFactory square 
       (SquareState 
         { valueFunction: \_ -> do
             test <- (readSquare i) =<< readState ctx
             pure $ test
         , click: \_ -> do
-            --transformState ctx (updateSquare i )
             rState <- readState ctx
-            writeStateWithCallback ctx (updateSquare i rState) (pure unit) >>= hasWinner >>> log
+            writeStateWithCallback ctx (if (not $ hasWinner'' rState) then updateSquare i rState else rState) (pure unit) >>= hasWinner' >>> log
         , test: show i    
         })
 
   boardRow ctx row =
-    D.div [P.className "board-row"] $ map (\i -> rendersquare' ctx $ row * boardSize + i ) (0..(boardSize - 1))
+    D.div [P.className "board-row"] $ map (\i -> rendersquare ctx $ row * boardSize + i ) (0..(boardSize - 1))
 
   
 
