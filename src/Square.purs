@@ -22,27 +22,28 @@ initialSquareState =
     , click: \_ -> pure unit
     }
 
-fromEffToString :: forall eff. Maybe Player -> Eff eff String
-fromEffToString (Just p) = pure $ showPlayer p
-fromEffToString Nothing = pure ""
+toString :: forall t1. SquareState -> Eff (console:: CONSOLE, state :: ReactState ReadOnly | t1) String
+toString (SquareState {valueFunction}) = do
+    player <- valueFunction unit  
+    case player of
+        Just p -> pure $ showPlayer p
+        Nothing -> pure $ "" 
+
+setValue ::  forall t1. SquareState -> Eff (console:: CONSOLE, state :: ReactState ReadWrite | t1) Unit
+setValue (SquareState { click }) = click unit
 
 square :: ReactClass SquareState
 square = createClass squareSpec
   where
   squareSpec = (spec initialSquareState render)
-    { displayName = "test" }
-  
-  toString (SquareState {valueFunction}) = do
-    fromEffToString =<< valueFunction unit  
+    { displayName = "square" }  
 
-  setValue (SquareState { click }) = click unit
   render ctx = do
     props <- getProps ctx
     textValue <- toString props
     pure $ D.button 
             [ P.className "square" 
-            , P.onClick (\_ -> 
-                getProps ctx >>= setValue)
+            , P.onClick \_ -> getProps ctx >>= setValue
             ] 
             [ D.text textValue ]
     

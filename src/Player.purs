@@ -2,7 +2,6 @@ module Player where
 
 import Prelude
 import Data.Maybe (Maybe(..))
--- import Data.Array ((:), (..), mapMaybe, head)
 import Data.List (foldl)
 
 data Player = X | O
@@ -15,6 +14,7 @@ flipPlayer :: Player -> Player
 flipPlayer X = O
 flipPlayer O = X
 
+samePlayer :: Maybe Player -> Maybe Player -> Maybe Player
 samePlayer (Just X) (Just X) = Just X
 samePlayer (Just O) (Just O) = Just O
 samePlayer m n = Nothing

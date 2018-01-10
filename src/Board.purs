@@ -45,8 +45,7 @@ board boardSize = createClass boardSpec
   boardSpec = (spec (emptyBoardState boardSize) render)
     { displayName = "board"}
 
-  winningLines' = winningLines boardSize
-  
+  winningLines' = winningLines boardSize  
   hasWinner squares = winningLines' # mapMaybe (isWinner squares) # head
 
   logWinner (BoardState {squares}) = 
@@ -70,8 +69,7 @@ board boardSize = createClass boardSpec
         , isNext: flipPlayer isNext
         }
 
-  validMove boardState i = do
-        (not $ gameHasEnded boardState) && (isNothing $ readSquare i boardState)
+  validMove boardState i = not $ gameHasEnded boardState && (isNothing $ readSquare i boardState)
 
   rendersquare ctx i =                
     createFactory square 
