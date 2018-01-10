@@ -6,13 +6,12 @@ import Square (SquareState(..), square)
 import Player (Player(..), flipPlayer, showPlayer, allOfPlayer)
 import React.DOM as D
 import React.DOM.Props as P
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
-import Data.Maybe (Maybe(..), isJust)
+import Control.Monad.Eff.Console (log)
+import Data.Maybe (Maybe(..), isJust, isNothing)
 import Control.Alt ((<|>))
 import Data.Array ((:), (..), mapMaybe, head)
 import Data.List (List, range, index, mapWithIndex)
-import React (ReactClass, ReactState, ReadOnly, createFactory, createClass, spec, readState, writeStateWithCallback)
+import React (ReactClass, createFactory, createClass, spec, readState, writeStateWithCallback)
 
 fromNest :: forall t1. Maybe (Maybe t1) -> Maybe t1
 fromNest (Just c) = c
@@ -61,24 +60,28 @@ board boardSize = createClass boardSpec
        Just player -> "Winner: " <> showPlayer player
        Nothing -> "Next player: " <> showPlayer isNext
 
-  readSquare :: forall t1. Int -> BoardState -> Eff (console:: CONSOLE, state :: ReactState ReadOnly | t1) (Maybe Player)
+  readSquare :: Int -> BoardState -> (Maybe Player)
   readSquare i (BoardState {squares}) = do
-    index squares i # fromNest # pure
+    index squares i # fromNest
 
   updateSquare i (BoardState {squares, isNext}) = do 
     BoardState 
         { squares : mapWithIndex (\j s -> if j == i then (Just isNext) else s) squares
         , isNext: flipPlayer isNext
         }
+
+  validMove boardState i = do
+        (not $ gameHasEnded boardState) && (isNothing $ readSquare i boardState)
+
   rendersquare ctx i =                
     createFactory square 
       (SquareState 
         { valueFunction: \_ -> do
-            test <- (readSquare i) =<< readState ctx
-            pure $ test
+            rState <- readState ctx
+            pure $ readSquare i rState
         , click: \_ -> do
             rState <- readState ctx
-            writeStateWithCallback ctx (if (not $ gameHasEnded rState) then updateSquare i rState else rState) (pure unit) >>= logWinner >>> log
+            writeStateWithCallback ctx (if (validMove rState i) then updateSquare i rState else rState) (pure unit) >>= logWinner >>> log
         })
 
   boardRow ctx row  =
